@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package mx.cornejo.anarchyonline.chatlogparser;
+package mx.cornejo.anarchyonline.multitool;
 
 import java.awt.Container;
 import java.awt.GridBagConstraints;
@@ -28,7 +28,9 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
 
@@ -39,22 +41,22 @@ import mx.cornejo.anarchyonline.utils.AOUtils;
  *
  * @author javier
  */
-public class ChatLogParser extends JFrame
+public class MultiTool extends JFrame
 {
     private static final String PREFS_AO_PREFS_DIR = "ao_prefs_dir";
     private static final String PREFS_LAST_USED_WINDOW = "last_used_window";
 
-    private static final Logger LOG = Logger.getLogger(ChatLogParser.class.getCanonicalName());
+    private static final Logger LOG = Logger.getLogger(MultiTool.class.getCanonicalName());
     
-    private Preferences appPrefs = Preferences.userNodeForPackage(ChatLogParser.class);
+    private final Preferences appPrefs = Preferences.userNodeForPackage(MultiTool.class);
     private ResourceBundle resourceBundle = null;
     private ParserWorker worker = null;
     
-    public ChatLogParser()
+    public MultiTool()
     {
         super();
 
-        resourceBundle = ResourceBundle.getBundle("mx.cornejo.anarchyonline.chatlogparser.Messages");
+        resourceBundle = ResourceBundle.getBundle("mx.cornejo.anarchyonline.multitool.plugins.logparser.Messages");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setTitle(getString("app.title")); // "AO ChatLog Parser"
         buildGUI();
@@ -81,6 +83,17 @@ public class ChatLogParser extends JFrame
                 menu.add(menuItem);
             }
             
+            {
+                JMenuItem menuItem = new JMenuItem(getString("menu.exit"));
+                menuItem.setMnemonic(KeyEvent.VK_E);
+                //menuItem.getAccessibleContext().setAccessibleDescription(getString("menu.exit.desc"));
+                menuItem.addActionListener((e) ->
+                {
+                    System.exit(0);
+                });
+                menu.add(menuItem);
+            }
+            
             menuBar.add(menu);
         }
         
@@ -102,11 +115,8 @@ public class ChatLogParser extends JFrame
         return menuBar;
     }
     
-    private void buildGUI()
+    private JPanel getParserPanel()
     {
-        setSize(800,600);
-        setJMenuBar(buildMenuBar());
-        
         JTextArea txtArea = new JTextArea();
         txtArea.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(txtArea);
@@ -188,12 +198,41 @@ public class ChatLogParser extends JFrame
             }
         });
         
+        JPanel panel = new JPanel();
+        panel.setName("Log Parser");
+        panel.setLayout(new GridBagLayout());
+        
+        panel.add(windowSelectBox, new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
+        panel.add(controlBttn,     new GridBagConstraints(1,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
+        panel.add(scrollPane,      new GridBagConstraints(0,1, 2,1, 1.0,1.0, GridBagConstraints.WEST,   GridBagConstraints.BOTH, new Insets(2,2,2,2), 0,0));
+
+        return panel;
+    }
+    
+    private List<JPanel> getPanels()
+    {
+        List<JPanel> panels = new ArrayList();
+        panels.add(getParserPanel());
+        
+        return panels;
+    }
+    
+    private void buildGUI()
+    {
+        setSize(800,600);
+        setJMenuBar(buildMenuBar());
+        
+        JTabbedPane tabPane = new JTabbedPane(JTabbedPane.LEFT);
+        
+        List<JPanel> panels = getPanels();
+        panels.stream().forEach((panel) ->
+        {
+            tabPane.add(panel, panel.getName());
+        });
+        
         Container c = getContentPane();
         c.setLayout(new GridBagLayout());
-
-        c.add(windowSelectBox, new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
-        c.add(controlBttn,     new GridBagConstraints(1,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
-        c.add(scrollPane,      new GridBagConstraints(0,1, 2,1, 1.0,1.0, GridBagConstraints.WEST,   GridBagConstraints.BOTH, new Insets(2,2,2,2), 0,0));
+        c.add(tabPane, new GridBagConstraints(0,0, 1,1, 1.0,1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2,2,2,2), 0,0));
     }
     
     private void checkSettings()
@@ -223,7 +262,7 @@ public class ChatLogParser extends JFrame
                 JFileChooser fc = new JFileChooser();
                 fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
-                int returnVal = fc.showOpenDialog(ChatLogParser.this);
+                int returnVal = fc.showOpenDialog(MultiTool.this);
                 if (returnVal == JFileChooser.APPROVE_OPTION)
                 {
                     File selectedFile = fc.getSelectedFile();
@@ -237,6 +276,20 @@ public class ChatLogParser extends JFrame
         }
         
         appPrefs.put(PREFS_AO_PREFS_DIR, aoPrefsPath);
+    }
+    
+    private void cleanUp()
+    {
+        if (worker != null)
+        {
+            worker.stop();
+        }
+    }
+    
+    private void handleException(Exception ex, String sourceClass, String sourceMethod)
+    {
+        LOG.throwing(sourceClass, sourceMethod, ex);
+        ex.printStackTrace();
     }
     
     private class ParserWorker extends SwingWorker<Object, AOMessage>
@@ -302,7 +355,7 @@ public class ChatLogParser extends JFrame
                     }
                     catch (InterruptedException ex)
                     {
-                        ex.printStackTrace();
+                        handleException(ex, ParserWorker.class.getCanonicalName(), "runInBackground");
                     }
                 }
                 
@@ -310,7 +363,7 @@ public class ChatLogParser extends JFrame
             }
             catch (IOException ex)
             {
-                ex.printStackTrace();
+                handleException(ex, ParserWorker.class.getCanonicalName(), "runInBackground");
             }
             return null;
         }
@@ -326,7 +379,7 @@ public class ChatLogParser extends JFrame
         
         public void stop()
         {
-            this.working = false;
+            working = false;
         }
         
         public boolean isWorking()
@@ -340,7 +393,17 @@ public class ChatLogParser extends JFrame
      */
     public static void main(String[] args)
     {
-        ChatLogParser parser = new ChatLogParser();
+        MultiTool parser = new MultiTool();
+        
+        Runtime.getRuntime().addShutdownHook(new Thread()
+        {
+            @Override
+            public void run()
+            {
+                parser.cleanUp();
+            }
+        });
+        
         parser.setVisible(true);
         parser.checkSettings();
     }
