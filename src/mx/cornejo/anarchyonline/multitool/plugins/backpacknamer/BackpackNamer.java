@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
+import java.util.regex.Pattern;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -27,6 +28,7 @@ import javax.swing.SwingWorker;
 import mx.cornejo.anarchyonline.multitool.MultiTool;
 import mx.cornejo.anarchyonline.multitool.plugins.AbstractPlugin;
 import mx.cornejo.anarchyonline.utils.AOUtils;
+import mx.cornejo.anarchyonline.utils.Backpack;
 
 /**
  *
@@ -39,6 +41,12 @@ public class BackpackNamer extends AbstractPlugin
     public BackpackNamer()
     {
         super();
+    }
+    
+    @Override
+    public void cleanUp()
+    {
+        
     }
     
     @Override
@@ -63,82 +71,79 @@ public class BackpackNamer extends AbstractPlugin
         logScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
 
         JButton nameButton = new JButton(getString("button.name.name"));
-        nameButton.addActionListener(new ActionListener()
+        nameButton.addActionListener((ActionEvent e) ->
         {
-            @Override
-            public void actionPerformed(ActionEvent e)
+            if (e.getSource() == nameButton)
             {
-                if (e.getSource() == nameButton)
+                String prefsPath = getPreference(MultiTool.PREFS_AO_PREFS_DIR, null);
+                if (prefsPath != null)
                 {
-                    String prefsPath = getPreference(MultiTool.PREFS_AO_PREFS_DIR, null);
-                    if (prefsPath != null)
+                    logTxtArea.setText("");
+                    File prefsDirFile = new File(prefsPath);
+                    
+                    Properties props = new Properties();
+                    
+                    String namePrefix = namePrefixTxt.getText();
+                    if (namePrefix != null && !namePrefix.isEmpty())
                     {
-                        logTxtArea.setText("");
-                        File prefsDirFile = new File(prefsPath);
-                        
-                        Properties props = new Properties();
-                        props.setProperty("namePrefix", namePrefixTxt.getText());
-                        props.setProperty("renameIfGeneric", "true");
-                        
-                        NamerWorker task = new NamerWorker(props, prefsDirFile, logTxtArea);
-                        task.addPropertyChangeListener(new PropertyChangeListener()
-                        {
-                            public void propertyChange(PropertyChangeEvent evt)
-                            {
-                                if ("progess".equals(evt.getPropertyName()))
-                                {
-                                    //progressBar.setValue((Integer)evt.getNewValue());
-                                }
-                            }
-                        });
-                        task.execute();
+                        props.setProperty("namePrefix", namePrefix);
                     }
+                    props.setProperty("renamePattern", Pattern.quote(namePrefix + "\\d+"));
+                    props.setProperty("prefsDir", prefsDirFile.getAbsolutePath());
+                    
+                    NamerWorker task = new NamerWorker(props, logTxtArea);
+                    task.addPropertyChangeListener((PropertyChangeEvent evt) ->
+                    {
+                        if ("progess".equals(evt.getPropertyName()))
+                        {
+                            //progressBar.setValue((Integer)evt.getNewValue());
+                        }
+                    });
+                    task.execute();
                 }
             }
         });
         
-        JPanel panel = new JPanel();
-        panel.setName(getString("panel.name"));
-        panel.setLayout(new GridBagLayout());
+        JPanel p = new JPanel();
+        p.setName(getString("panel.name"));
+        p.setLayout(new GridBagLayout());
         
-        panel.add(namePrefixLbl,   new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
-        panel.add(namePrefixTxt,   new GridBagConstraints(1,0, 1,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.HORIZONTAL, new Insets(2,2,2,2), 0,0));
+        p.add(namePrefixLbl,   new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+        p.add(namePrefixTxt,   new GridBagConstraints(1,0, 1,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.HORIZONTAL, new Insets(2,2,2,2), 0,0));
         
-        panel.add(logScrollPane,   new GridBagConstraints(0,1, 2,1, 1.0,1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH,       new Insets(2,2,2,2), 0,0));
-        panel.add(nameButton,      new GridBagConstraints(0,2, 2,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+        p.add(logScrollPane,   new GridBagConstraints(0,1, 2,1, 1.0,1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH,       new Insets(2,2,2,2), 0,0));
+        p.add(nameButton,      new GridBagConstraints(0,2, 2,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
         
-        return panel;
-    }
-    
-    @Override
-    public void cleanUp()
-    {
-        
+        return p;
     }
     
     private class NamerWorker extends SwingWorker<Object, String>
     {
         private Properties props = null;
-        private File prefsDir = null;
         private JTextArea textArea = null;
         
-        public NamerWorker(Properties props, File prefsDir, JTextArea textArea)
+        public NamerWorker(Properties props, JTextArea textArea)
         {
             this.props = props;
-            this.prefsDir = prefsDir;
             this.textArea = textArea;
         }
         
         @Override
         public Void doInBackground()
         {
-            String prefix = (String)props.get("namePrefix");
+            String prefsPath = props.getProperty("prefsDir");
+            File prefsDir = new File(prefsPath);
+            
+            String prefix = props.getProperty("namePrefix", "backpack");
             
             AOUtils.applyToBackpacks(prefsDir, (backpack) ->
             {
                 try
                 {
-                    backpack.setName(prefix + backpack.getXMLNumber());
+                    if (checkRename(backpack))
+                    {
+                        backpack.setName(prefix + backpack.getXMLNumber());
+                    }
                 }
                 catch (IOException ex)
                 {
@@ -157,6 +162,13 @@ public class BackpackNamer extends AbstractPlugin
             {
                 textArea.append(status + "\n");
             });
+        }
+        
+        private boolean checkRename(Backpack backpack)
+        {
+            String oldName = backpack.getName();
+            String renamePattern = props.getProperty("renamePattern");
+            return (oldName == null || oldName.isEmpty() || oldName.matches(renamePattern));
         }
     }
 
