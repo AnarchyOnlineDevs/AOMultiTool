@@ -59,7 +59,6 @@ public abstract class AbstractPlugin implements Plugin
     
     private String getFullBundleName(String bundleName)
     {
-        String simpleName = this.getClass().getSimpleName();
         String canonName = this.getClass().getCanonicalName();
         
         int lastDotIdx = canonName.lastIndexOf(".");

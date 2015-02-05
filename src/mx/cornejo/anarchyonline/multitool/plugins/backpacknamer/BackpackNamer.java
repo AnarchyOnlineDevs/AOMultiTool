@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import javax.swing.JButton;
@@ -28,6 +29,7 @@ import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingWorker;
 import mx.cornejo.anarchyonline.multitool.MultiTool;
 import mx.cornejo.anarchyonline.multitool.plugins.AbstractPlugin;
+import mx.cornejo.anarchyonline.utils.AOUtils;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
@@ -41,6 +43,8 @@ import org.jdom2.output.XMLOutputter;
  */
 public class BackpackNamer extends AbstractPlugin
 {
+    private JPanel panel = buildPanel();
+    
     public BackpackNamer()
     {
         super();
@@ -48,6 +52,11 @@ public class BackpackNamer extends AbstractPlugin
     
     @Override
     public JPanel getPanel()
+    {
+        return panel;
+    }
+    
+    private JPanel buildPanel()
     {
         JLabel namePrefixLbl = new JLabel(getString("label.prefix.name"));
         JTextField namePrefixTxt = new JTextField(getString("text.prefix.default"));
@@ -128,79 +137,22 @@ public class BackpackNamer extends AbstractPlugin
         @Override
         public Void doInBackground()
         {
-            processPrefsFolder(prefsFolder);
+            HashMap<String, File> charDirs = AOUtils.getCharacterDirs();
+            charDirs.entrySet().stream().forEach((entry) -> 
+            {
+                processCharFolder(entry.getValue());
+            });
+            
             return null;
         }
         
         @Override
         protected void process(List<String> chunks)
         {
-            for (String status : chunks)
+            chunks.stream().forEach((status) ->
             {
                 textArea.append(status + "\n");
-            }
-        }
-        
-        private void processPrefsFolder(File prefs)
-        {
-            File[] possibleAccounts = prefs.listFiles();
-            if (possibleAccounts != null)
-            {
-                // Check each subfolder, if it has a "CharXXXX" folder, then this is an account folder
-                for (File possAcc : possibleAccounts)
-                {
-                    if (!possAcc.isDirectory())
-                    {
-                        continue;
-                    }
-
-                    File[] subFiles = possAcc.listFiles();
-                    if (subFiles == null)
-                    {
-                        continue;
-                    }
-
-                    boolean isAccountFolder = false;
-                    for (File sub : subFiles)
-                    {
-                        if (sub.isDirectory() && sub.getName().matches("Char\\d+"))
-                        {
-                            isAccountFolder = true;
-                            break;
-                        }
-                    }
-
-                    if (!isAccountFolder)
-                    {
-                        continue;
-                    }
-
-                    processAccountFolder(possAcc);
-                }
-            }
-        }
-        
-        private int processAccountFolder(File acc)
-        {
-            publish("Account " + acc.getName());
-            
-            int num = 0;
-            
-            File[] charFolders = acc.listFiles(new FilenameFilter()
-            {
-                public boolean accept(File dir, String name)
-                {
-                    return name.matches("Char\\d+");
-                }
             });
-            
-            for (File charFolder : charFolders)
-            {
-                processCharFolder(charFolder);
-                num++;
-            }
-            
-            return num;
         }
         
         private int processCharFolder(File charFolder)

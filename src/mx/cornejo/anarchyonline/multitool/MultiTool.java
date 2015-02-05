@@ -8,7 +8,9 @@ package mx.cornejo.anarchyonline.multitool;
 import java.awt.Container;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Image;
 import java.awt.Insets;
+import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.util.ArrayList;
@@ -38,6 +40,8 @@ import mx.cornejo.anarchyonline.utils.AOUtils;
 public class MultiTool extends JFrame
 {
     public static final String PREFS_AO_PREFS_DIR = "ao_prefs_dir";
+    public static final String PREFS_LAST_USED_TAB = "last_used_tab";
+    
     private static final Logger LOG = Logger.getLogger(MultiTool.class.getCanonicalName());
     
     private final Preferences prefs = Preferences.userNodeForPackage(MultiTool.class);
@@ -47,10 +51,16 @@ public class MultiTool extends JFrame
     public MultiTool()
     {
         super();
+        
+        Image icon = Toolkit.getDefaultToolkit().getImage(MultiTool.class.getResource("icon.png"));
+        setIconImage(icon);
+        
         resourceBundle = ResourceBundle.getBundle("mx.cornejo.anarchyonline.multitool.Messages");        
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setTitle(getString("app.title")); // "AO ChatLog Parser"
+
+        checkSettings();
+        setTitle(getString("app.title") + " - " + prefs.get(PREFS_AO_PREFS_DIR, ""));
 
         plugins = loadPlugins();
         buildGUI();
@@ -132,7 +142,20 @@ public class MultiTool extends JFrame
         plugins.stream().forEach((plugin) ->
         {
             JPanel panel = plugin.getPanel();
-            tabPane.add(panel, panel.getName());
+            tabPane.add(panel.getName(), panel);
+        });
+        
+        String lastTabUsed = prefs.get(PREFS_LAST_USED_TAB, null);
+        if (lastTabUsed != null)
+        {
+            tabPane.setSelectedIndex(Integer.parseInt(lastTabUsed));
+        }
+        
+        tabPane.addChangeListener((e) -> 
+        {
+            JTabbedPane tp = (JTabbedPane)e.getSource();
+            int tabIdx = tp.getSelectedIndex();
+            prefs.put(PREFS_LAST_USED_TAB, Integer.toString(tabIdx));
         });
         
         Container c = getContentPane();
@@ -214,6 +237,5 @@ public class MultiTool extends JFrame
         });
         
         multiTool.setVisible(true);
-        multiTool.checkSettings();
     }
 }

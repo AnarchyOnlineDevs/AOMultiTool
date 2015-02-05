@@ -19,6 +19,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
 
@@ -34,11 +35,17 @@ public class LogParser extends AbstractPlugin
 {
     private static final String PREFS_LAST_USED_WINDOW = "last_used_window";
     private ParserWorker worker = null;
+    private JPanel panel = buildParserPanel();
 
+    public LogParser()
+    {
+        super();
+    }
+    
     @Override
     public JPanel getPanel()
     {
-        return getParserPanel();
+        return panel;
     }
     
     @Override
@@ -50,12 +57,7 @@ public class LogParser extends AbstractPlugin
         } 
     }
     
-    public LogParser()
-    {
-        super();
-    }
-    
-    private JPanel getParserPanel()
+    private JPanel buildParserPanel()
     {
         JTextArea txtArea = new JTextArea();
         txtArea.setEditable(false);
@@ -137,13 +139,20 @@ public class LogParser extends AbstractPlugin
             }
         });
         
+        JPanel textPanel = new JPanel();
+        textPanel.setLayout(new GridBagLayout());
+        textPanel.add(scrollPane, new GridBagConstraints(0,0, 1,1, 1.0,1.0, GridBagConstraints.CENTER,   GridBagConstraints.BOTH, new Insets(2,2,2,2), 0,0));
+        
+        JTabbedPane tabPane = new JTabbedPane();
+        tabPane.add("text", textPanel);
+        
         JPanel panel = new JPanel();
         panel.setName(getString("panel.name"));
         panel.setLayout(new GridBagLayout());
         
         panel.add(windowSelectBox, new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
         panel.add(controlBttn,     new GridBagConstraints(1,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
-        panel.add(scrollPane,      new GridBagConstraints(0,1, 2,1, 1.0,1.0, GridBagConstraints.WEST,   GridBagConstraints.BOTH, new Insets(2,2,2,2), 0,0));
+        panel.add(tabPane,         new GridBagConstraints(0,1, 2,1, 1.0,1.0, GridBagConstraints.WEST,   GridBagConstraints.BOTH, new Insets(2,2,2,2), 0,0));
 
         return panel;
     }
@@ -243,5 +252,4 @@ public class LogParser extends AbstractPlugin
             return this.working;
         }
     }
-
 }

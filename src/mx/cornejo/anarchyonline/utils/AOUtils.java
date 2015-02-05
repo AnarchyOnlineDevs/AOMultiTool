@@ -26,6 +26,11 @@ public class AOUtils
         return AOUtils.getCharacterDirs(null);
     }
     
+    /**
+     * A map from characterName -> Directory File
+     * @param account
+     * @return 
+     */
     public static HashMap<String, File> getCharacterDirs(File account)
     {
         HashMap<String, File> result = new HashMap();
