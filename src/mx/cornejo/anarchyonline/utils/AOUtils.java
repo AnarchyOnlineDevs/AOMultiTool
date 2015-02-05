@@ -6,14 +6,10 @@
 package mx.cornejo.anarchyonline.utils;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.JDOMException;
-import org.jdom2.input.SAXBuilder;
 
 /**
  *
@@ -21,88 +17,34 @@ import org.jdom2.input.SAXBuilder;
  */
 public class AOUtils
 {
-    public static HashMap<String, File> getCharacterDirs()
+    public static List<Account> getAccounts(File prefsDir)
     {
-        return AOUtils.getCharacterDirs(null);
-    }
-    
-    /**
-     * A map from characterName -> Directory File
-     * @param account
-     * @return 
-     */
-    public static HashMap<String, File> getCharacterDirs(File account)
-    {
-        HashMap<String, File> result = new HashMap();
-        
-        ArrayList<File> accounts = new ArrayList();
-        if (account != null)
-        {
-            accounts.add(account);
-        }
-        else
-        {
-            HashMap<String, File> allAccounts = AOUtils.getAccountDirs();
-            allAccounts.entrySet().stream().forEach((entry) ->
-            {
-                accounts.add(entry.getValue());
-            });
-        }
-        
-        for (File acc : accounts)
-        {
-            File[] accSubDirs = acc.listFiles((File file) ->
-            {
-                return file.isDirectory() && file.getName().startsWith("Char");
-            });
-
-            for (File charDir : accSubDirs)
-            {
-                String charName = AOUtils.getCharacterNameForDir(charDir);
-                result.put(charName, charDir);
-            }
-        }
-        
-        return result;
-    }
-    
-    public static String getCharacterNameForDir(File characterDir)
-    {
-        return characterDir.getName();
-    }
-    
-    public static HashMap<String, File> getAccountDirs()
-    {
-        HashMap<String, File> result = new HashMap();
-        
-        File prefsDir = AOUtils.getAOPrefsDir();
-        if (prefsDir == null)
+        if (prefsDir == null || !prefsDir.exists() || !prefsDir.isDirectory())
         {
             return null;
         }
+
+        List<Account> accounts = new ArrayList<>();
         
-        File[] accDirs = prefsDir.listFiles((File file) ->
-        {
-            if (file.isDirectory())
-            {
-                File[] subs = file.listFiles();
-                for (File sub : subs)
-                {
-                    if (sub.getName().equals("Login.cfg"))
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        });
-        
+        File[] accDirs = prefsDir.listFiles();
         for (File accDir : accDirs)
         {
-            result.put(accDir.getName(), accDir);
+            try
+            {
+                accounts.add(new Account(accDir));
+            }
+            catch (FileNotFoundException ex)
+            {
+                // do nothing
+            }
         }
         
-        return result;
+        if (accounts.isEmpty())
+        {
+            accounts = null;
+        }
+        
+        return accounts;
     }
     
     public static File geAOLocalDir()
@@ -152,58 +94,42 @@ public class AOUtils
         return null;
     }
     
-    public static HashMap<String, File> getWindowLogFiles(File charDir)
+    public static interface Applier<T>
     {
-        String windowsDirPath = charDir.getAbsolutePath() +
-                File.separator + "Chat" +
-                File.separator + "Windows";
-        File windowsDir = new File(windowsDirPath);
-        if (!windowsDir.exists() || !windowsDir.isDirectory())
-        {
-            return null;
-        }
-        
-        HashMap<String, File> results = new HashMap();
-        
-        File[] windows = windowsDir.listFiles();
-        for (File window : windows)
-        {
-            String cfgPath = window.getAbsolutePath() +
-                            File.separator + "Config.xml";
-            File configXml = new File(cfgPath);
-            
-            if (configXml.exists())
-            {
-                try
-                {
-                    SAXBuilder builder = new SAXBuilder();
-                    Document doc = (Document)builder.build(configXml);
-                    Element rootNode = doc.getRootElement();
-                    
-                    List<Element> stringElems = rootNode.getChildren("String");
-                    stringElems.stream().forEach((stringElem) ->
-                    {
-                        String elemName = stringElem.getAttributeValue("name");
-                        if (elemName.equals("name"))
-                        {
-                            String elemVal = stringElem.getAttributeValue("value");
-                            elemVal = elemVal.substring(1, elemVal.length()-1);
-                            String logPath = window.getAbsolutePath() +
-                                             File.separator + "Log.txt";
-                            File logFile = new File(logPath);
-                            
-                            results.put(elemVal, logFile);
-                        }
-                    });
-                }
-                catch (JDOMException|IOException ex)
-                {
-                    ex.printStackTrace();
-                }
-            }
-        }
-        
-        return results;
+        void apply(T obj);
     }
     
+    public static void applyToBackpacks(File prefsDir, Applier<Backpack> func)
+    {
+        List<Account> accounts = AOUtils.getAccounts(prefsDir);
+        accounts.stream().forEach((account) -> 
+        {
+            List<AOCharacter> toons = account.getCharacters();
+            toons.stream().forEach((toon) -> 
+            {
+                List<Backpack> backpacks = toon.getBackpacks();
+                backpacks.stream().forEach((backpack) -> 
+                {
+                    func.apply(backpack);
+                });
+            });
+        });
+    }
+    
+    public static void applyToWindows(File prefsDir, Applier<ChatWindow> func)
+    {
+        List<Account> accounts = AOUtils.getAccounts(prefsDir);
+        accounts.stream().forEach((account) -> 
+        {
+            List<AOCharacter> toons = account.getCharacters();
+            toons.stream().forEach((toon) -> 
+            {
+                List<ChatWindow> windows = toon.getChatWindows();
+                windows.stream().forEach((window) -> 
+                {
+                    func.apply(window);
+                });
+            });
+        });
+    }
 }

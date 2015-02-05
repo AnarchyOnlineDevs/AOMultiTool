@@ -5,27 +5,31 @@
  */
 package mx.cornejo.anarchyonline.multitool.plugins.logparser;
 
+import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
+import mx.cornejo.anarchyonline.multitool.MultiTool;
 
 import mx.cornejo.anarchyonline.multitool.plugins.AbstractPlugin;
 import mx.cornejo.anarchyonline.utils.AOMessage;
 import mx.cornejo.anarchyonline.utils.AOUtils;
+import mx.cornejo.anarchyonline.utils.ChatWindow;
 
 /**
  *
@@ -35,7 +39,7 @@ public class LogParser extends AbstractPlugin
 {
     private static final String PREFS_LAST_USED_WINDOW = "last_used_window";
     private ParserWorker worker = null;
-    private JPanel panel = buildParserPanel();
+    private JPanel panel = null;
 
     public LogParser()
     {
@@ -45,6 +49,10 @@ public class LogParser extends AbstractPlugin
     @Override
     public JPanel getPanel()
     {
+        if (panel == null)
+        {
+            panel = buildParserPanel();
+        }
         return panel;
     }
     
@@ -56,7 +64,23 @@ public class LogParser extends AbstractPlugin
             worker.stop();
         } 
     }
-    
+
+    private class MyCellRenderer extends DefaultListCellRenderer
+    {
+        @Override
+        public Component getListCellRendererComponent(JList<?> list,
+                                                      Object value,
+                                                      int index,
+                                                      boolean isSelected,
+                                                      boolean cellHasFocus)
+        {
+            JLabel lbl = (JLabel)super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            ChatWindow window = (ChatWindow)value;
+            lbl.setText(window.getName() + " [" + window.getCharacter()/*+"@"+window.getAccount()*/+"]");
+            return lbl;
+        }
+    }
+
     private JPanel buildParserPanel()
     {
         JTextArea txtArea = new JTextArea();
@@ -64,40 +88,32 @@ public class LogParser extends AbstractPlugin
         JScrollPane scrollPane = new JScrollPane(txtArea);
         
         // Character and window selection combo box
-        HashMap<String, File> chars = AOUtils.getCharacterDirs();
-        HashMap<String, File> windows = new HashMap();
-        
-        ArrayList<String> optionList = new ArrayList();
-        chars.entrySet().stream().forEach((charEntry) ->
+        JComboBox windowSelectBox = new JComboBox();
+        windowSelectBox.setEditable(false);
+        windowSelectBox.setRenderer(new MyCellRenderer());
+
+        String prefsPath = getPreference(MultiTool.PREFS_AO_PREFS_DIR, null);
+        if (prefsPath != null)
         {
-            String charName = charEntry.getKey();
-            File charDir = charEntry.getValue();
-            
-            HashMap<String, File> charWindows = AOUtils.getWindowLogFiles(charDir);
-            charWindows.entrySet().stream().forEach((windowEntry) ->
+            String lastWindowUsed = getPreference(PREFS_LAST_USED_WINDOW, null);
+
+            File prefsDir = new File(prefsPath);
+            AOUtils.applyToWindows(prefsDir, (window) ->
             {
-                String windowName = windowEntry.getKey();
-                File windowLogFile = windowEntry.getValue();
+                windowSelectBox.addItem(window);
                 
-                windows.put(charName + " - " + windowName, windowLogFile);
-                optionList.add(charName + " - " + windowName);
+                if (lastWindowUsed.equals(window.getName()+window.getCharacter()))
+                {
+                    windowSelectBox.setSelectedItem(window);
+                }
             });
-        });
-
-        String[] optionArray = optionList.toArray(new String[optionList.size()]);
-        JComboBox windowSelectBox = new JComboBox(optionArray);
-
-        String lastWindowUsed = getPreference(PREFS_LAST_USED_WINDOW, null);
-        if (lastWindowUsed != null)
-        {
-            windowSelectBox.setSelectedItem(lastWindowUsed);
         }
 
         windowSelectBox.addActionListener((e) -> 
         {
             JComboBox cb = (JComboBox)e.getSource();
-            String selectedWindow = (String)cb.getSelectedItem();
-            setPreference(PREFS_LAST_USED_WINDOW, selectedWindow);
+            ChatWindow selectedWindow = (ChatWindow)cb.getSelectedItem();
+            setPreference(PREFS_LAST_USED_WINDOW, selectedWindow.getName()+selectedWindow.getCharacter());
         });
         ///////////////////////////////////
         
@@ -109,8 +125,8 @@ public class LogParser extends AbstractPlugin
             switch (e.getActionCommand())
             {
                 case "start":
-                    String selectedWindow = (String)windowSelectBox.getSelectedItem();
-                    File logFile = windows.get(selectedWindow);
+                    ChatWindow window = (ChatWindow)windowSelectBox.getSelectedItem();
+                    File logFile = window.getLogFile();
                     if (logFile != null && logFile.exists())
                     {
                         windowSelectBox.setEnabled(false);
@@ -124,7 +140,6 @@ public class LogParser extends AbstractPlugin
                         
                         worker = new ParserWorker(props, logFile, txtArea);
                         worker.execute();
-
                     }
                 break;
 
