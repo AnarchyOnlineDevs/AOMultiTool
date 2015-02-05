@@ -7,6 +7,7 @@ package mx.cornejo.anarchyonline.multitool.plugins;
 
 import java.util.ResourceBundle;
 import java.util.logging.Logger;
+import java.util.prefs.Preferences;
 
 /**
  *
@@ -14,7 +15,9 @@ import java.util.logging.Logger;
  */
 public abstract class AbstractPlugin implements Plugin
 {
-    private final Logger LOG = Logger.getLogger(this.getClass().getCanonicalName());
+    protected final Logger LOG = Logger.getLogger(this.getClass().getCanonicalName());
+    private final Preferences prefs = Preferences.userNodeForPackage(this.getClass());
+    private Preferences globalPrefs = null;
     private ResourceBundle bundle = null;
     
     public AbstractPlugin()
@@ -22,9 +25,30 @@ public abstract class AbstractPlugin implements Plugin
         bundle = ResourceBundle.getBundle(getFullBundleName("Messages"));
     }
     
+    @Override
+    public void setGlobalPreferences(Preferences globalPrefs)
+    {
+        this.globalPrefs = globalPrefs;
+    }
+    
     protected String getString(String key)
     {
         return bundle.getString(key);
+    }
+    
+    protected String getPreference(String key, String def)
+    {
+        String value = prefs.get(key, null);
+        if (value == null)
+        {
+            value = globalPrefs.get(key, null);
+        }
+        return value;
+    }
+    
+    protected void setPreference(String key, String value)
+    {
+        prefs.put(key, value);
     }
     
     protected void handleException(Exception ex, String sourceClass, String sourceMethod)

@@ -26,6 +26,7 @@ import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
 import mx.cornejo.anarchyonline.multitool.plugins.Plugin;
+import mx.cornejo.anarchyonline.multitool.plugins.backpacknamer.BackpackNamer;
 import mx.cornejo.anarchyonline.multitool.plugins.logparser.LogParser;
 
 import mx.cornejo.anarchyonline.utils.AOUtils;
@@ -36,7 +37,7 @@ import mx.cornejo.anarchyonline.utils.AOUtils;
  */
 public class MultiTool extends JFrame
 {
-    private static final String PREFS_AO_PREFS_DIR = "ao_prefs_dir";
+    public static final String PREFS_AO_PREFS_DIR = "ao_prefs_dir";
     private static final Logger LOG = Logger.getLogger(MultiTool.class.getCanonicalName());
     
     private final Preferences prefs = Preferences.userNodeForPackage(MultiTool.class);
@@ -65,6 +66,11 @@ public class MultiTool extends JFrame
         List<Plugin> plugins = new ArrayList();
         
         plugins.add(new LogParser());
+        plugins.add(new BackpackNamer());
+        
+        plugins.stream().forEach((plugin) -> {
+            plugin.setGlobalPreferences(prefs);
+        });
         
         return plugins;
     }

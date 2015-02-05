@@ -5,6 +5,7 @@
  */
 package mx.cornejo.anarchyonline.multitool.plugins;
 
+import java.util.prefs.Preferences;
 import javax.swing.JPanel;
 
 /**
@@ -15,5 +16,6 @@ public interface Plugin
 {
     JPanel getPanel();
     void cleanUp();
+    void setGlobalPreferences(Preferences globalPrefs);
     
 }

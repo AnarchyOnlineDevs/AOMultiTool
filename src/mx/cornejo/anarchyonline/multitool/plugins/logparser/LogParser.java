@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
-import java.util.prefs.Preferences;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
@@ -34,7 +33,6 @@ import mx.cornejo.anarchyonline.utils.AOUtils;
 public class LogParser extends AbstractPlugin
 {
     private static final String PREFS_LAST_USED_WINDOW = "last_used_window";
-    private final Preferences prefs = Preferences.userNodeForPackage(LogParser.class);
     private ParserWorker worker = null;
 
     @Override
@@ -87,7 +85,7 @@ public class LogParser extends AbstractPlugin
         String[] optionArray = optionList.toArray(new String[optionList.size()]);
         JComboBox windowSelectBox = new JComboBox(optionArray);
 
-        String lastWindowUsed = prefs.get(PREFS_LAST_USED_WINDOW, null);
+        String lastWindowUsed = getPreference(PREFS_LAST_USED_WINDOW, null);
         if (lastWindowUsed != null)
         {
             windowSelectBox.setSelectedItem(lastWindowUsed);
@@ -97,8 +95,7 @@ public class LogParser extends AbstractPlugin
         {
             JComboBox cb = (JComboBox)e.getSource();
             String selectedWindow = (String)cb.getSelectedItem();
-            prefs.put(PREFS_LAST_USED_WINDOW, selectedWindow);
-
+            setPreference(PREFS_LAST_USED_WINDOW, selectedWindow);
         });
         ///////////////////////////////////
         
@@ -141,7 +138,7 @@ public class LogParser extends AbstractPlugin
         });
         
         JPanel panel = new JPanel();
-        panel.setName("Log Parser");
+        panel.setName(getString("panel.name"));
         panel.setLayout(new GridBagLayout());
         
         panel.add(windowSelectBox, new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
