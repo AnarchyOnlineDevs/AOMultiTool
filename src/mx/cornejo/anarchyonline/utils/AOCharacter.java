@@ -36,6 +36,8 @@ public class AOCharacter
     {
         if (backpacks == null)
         {
+            backpacks = new ArrayList<>();
+            
             String containersPath = dir + File.separator + "Containers";
             File containersDir = new File(containersPath);
             if (containersDir.exists() && containersDir.isDirectory())
@@ -47,8 +49,6 @@ public class AOCharacter
                         return name.matches("Container_51017x\\d+?\\.xml");
                     }
                 });
-                
-                backpacks = new ArrayList<>();
                 
                 for (File file : files)
                 {
@@ -62,11 +62,6 @@ public class AOCharacter
                     }
                 }
             }
-        }
-        
-        if (backpacks != null && backpacks.size() == 0)
-        {
-            backpacks = null;
         }
         
         return backpacks;

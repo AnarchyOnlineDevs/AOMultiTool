@@ -75,16 +75,17 @@ public class MultiTool extends JFrame
     
     private List<Plugin> loadPlugins()
     {
-        List<Plugin> plugins = new ArrayList();
+        List<Plugin> pluginList = new ArrayList();
         
-        plugins.add(new LogParser());
-        plugins.add(new BackpackNamer());
+        pluginList.add(new LogParser());
+        pluginList.add(new BackpackNamer());
         
-        plugins.stream().forEach((plugin) -> {
+        pluginList.stream().forEach((plugin) -> 
+        {
             plugin.setGlobalPreferences(prefs);
         });
         
-        return plugins;
+        return pluginList;
     }
 
     private JMenuBar buildMenuBar()
@@ -126,6 +127,10 @@ public class MultiTool extends JFrame
                 JMenuItem menuItem = new JMenuItem(getString("menu.about"));
                 menuItem.setMnemonic(KeyEvent.VK_A);
                 menuItem.getAccessibleContext().setAccessibleDescription(getString("menu.about.desc"));
+                menuItem.addActionListener((e) -> 
+                {
+                    
+                });
                 menu.add(menuItem);
             }
 

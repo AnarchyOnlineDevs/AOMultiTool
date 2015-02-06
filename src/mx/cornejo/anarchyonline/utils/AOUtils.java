@@ -19,29 +19,21 @@ public class AOUtils
 {
     public static List<Account> getAccounts(File prefsDir)
     {
-        if (prefsDir == null || !prefsDir.exists() || !prefsDir.isDirectory())
-        {
-            return null;
-        }
-
         List<Account> accounts = new ArrayList<>();
-        
-        File[] accDirs = prefsDir.listFiles();
-        for (File accDir : accDirs)
+        if (prefsDir != null && prefsDir.exists() && prefsDir.isDirectory())
         {
-            try
+            File[] accDirs = prefsDir.listFiles();
+            for (File accDir : accDirs)
             {
-                accounts.add(new Account(accDir));
+                try
+                {
+                    accounts.add(new Account(accDir));
+                }
+                catch (FileNotFoundException ex)
+                {
+                    // do nothing
+                }
             }
-            catch (FileNotFoundException ex)
-            {
-                // do nothing
-            }
-        }
-        
-        if (accounts.isEmpty())
-        {
-            accounts = null;
         }
         
         return accounts;
@@ -114,57 +106,44 @@ public class AOUtils
     
     public static void applyToBackpacks(File prefsDir, Applier3<Backpack,AOCharacter,Account> func)
     {
-        List<Account> accounts = AOUtils.getAccounts(prefsDir);
-        if (accounts != null)
-        {
-            accounts.stream().forEach((account) -> 
-            {
-                List<AOCharacter> toons = account.getCharacters();
-                if (toons != null)
-                {
-                    toons.stream().forEach((toon) -> 
-                    {
-                        List<Backpack> backpacks = toon.getBackpacks();
-                        if (backpacks != null)
-                        {
-                            backpacks.sort((Backpack b1, Backpack b2) ->
-                            {
-                                String name1 = b1.getName();
-                                if (name1 == null)
-                                {
-                                    name1 = "";
-                                }
-                                
-                                String name2 = b2.getName();
-                                if (name2 == null)
-                                {
-                                    name2 = "";
-                                }
-                                
-                                return name1.compareTo(name2);
-                            });
 
-                            backpacks.stream().forEach((backpack) -> 
-                            {
-                                func.apply(backpack, toon, account);
-                            });
-                        }
-                    });
-                }
+        AOUtils.getAccounts(prefsDir).stream().forEach((account) -> 
+        {
+            account.getCharacters().stream().forEach((toon) -> 
+            {
+                List<Backpack> backpacks = toon.getBackpacks();
+                backpacks.sort((Backpack b1, Backpack b2) ->
+                {
+                    String name1 = b1.getName();
+                    if (name1 == null)
+                    {
+                        name1 = "";
+                    }
+
+                    String name2 = b2.getName();
+                    if (name2 == null)
+                    {
+                        name2 = "";
+                    }
+
+                    return name1.compareTo(name2);
+                });
+
+                backpacks.stream().forEach((backpack) -> 
+                {
+                    func.apply(backpack, toon, account);
+                });
             });
-        }
+        });
     }
     
     public static void applyToWindows(File prefsDir, Applier<ChatWindow> func)
     {
-        List<Account> accounts = AOUtils.getAccounts(prefsDir);
-        accounts.stream().forEach((account) -> 
+        AOUtils.getAccounts(prefsDir).stream().forEach((account) -> 
         {
-            List<AOCharacter> toons = account.getCharacters();
-            toons.stream().forEach((toon) -> 
+            account.getCharacters().stream().forEach((toon) -> 
             {
-                List<ChatWindow> windows = toon.getChatWindows();
-                windows.stream().forEach((window) -> 
+                toon.getChatWindows().stream().forEach((window) -> 
                 {
                     func.apply(window);
                 });

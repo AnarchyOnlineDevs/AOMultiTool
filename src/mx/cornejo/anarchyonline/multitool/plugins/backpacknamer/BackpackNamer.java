@@ -22,6 +22,7 @@ import java.util.logging.Level;
 import java.util.regex.Pattern;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -35,9 +36,9 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
-import javax.swing.tree.TreeSelectionModel;
 
 import mx.cornejo.anarchyonline.multitool.MultiTool;
 import mx.cornejo.anarchyonline.multitool.plugins.AbstractPlugin;
@@ -45,6 +46,7 @@ import mx.cornejo.anarchyonline.utils.AOCharacter;
 import mx.cornejo.anarchyonline.utils.AOUtils;
 import mx.cornejo.anarchyonline.utils.Account;
 import mx.cornejo.anarchyonline.utils.Backpack;
+import org.jdom2.JDOMException;
 
 /**
  *
@@ -53,6 +55,7 @@ import mx.cornejo.anarchyonline.utils.Backpack;
 public class BackpackNamer extends AbstractPlugin
 {
     private JPanel panel = null;
+    private JTree tree = null;
     
     public BackpackNamer()
     {
@@ -75,9 +78,9 @@ public class BackpackNamer extends AbstractPlugin
         return panel;
     }
     
-    private TreeNode buildBackpackTree()
+    private DefaultMutableTreeNode buildBackpackTreeRoot()
     {
-        DefaultMutableTreeNode root = new DefaultMutableTreeNode("All");
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode(getString("tree.root.text"));
         
         HashMap<AOCharacter, DefaultMutableTreeNode> charNodes = new HashMap<>();
         HashMap<Account, DefaultMutableTreeNode> accNodes = new HashMap<>();
@@ -109,13 +112,14 @@ public class BackpackNamer extends AbstractPlugin
         return root;
     }
     
-    private JPanel buildDetailPanel(TreePath[] selected)
+    private JPanel buildDetailPanel(JTree tree)
     {
         JCheckBox renameChkBox = new JCheckBox(getString("checkbox.rename.text"));
         JTextField namePrefixTxt = new JTextField(getString("text.prefix.default"));
         JLabel nameSuffixLbl = new JLabel("####");
         
         JCheckBox listModeChkBox = new JCheckBox(getString("checkbox.listmode.text"));
+        JComboBox listModeCombo = new JComboBox(new String[] {getString("combobox.mode.list"), getString("combobox.mode.icon")});
         
         JTextArea logTxtArea = new JTextArea();
         logTxtArea.setEditable(false);
@@ -126,49 +130,86 @@ public class BackpackNamer extends AbstractPlugin
         JButton nameButton = new JButton(getString("button.name.name"));
         nameButton.addActionListener((ActionEvent e) ->
         {
-            if (e.getSource() == nameButton)
+            logTxtArea.setText("");
+
+            TreePath[] selectedPaths = tree.getSelectionPaths();
+
+            Properties props = new Properties();
+            
+            boolean rename = renameChkBox.isSelected();
+            if (rename)
             {
-                String prefsPath = getPreference(MultiTool.PREFS_AO_PREFS_DIR, null);
-                if (prefsPath != null)
+                String namePrefix = namePrefixTxt.getText();
+                if (namePrefix != null && !namePrefix.isEmpty())
                 {
-                    logTxtArea.setText("");
-                    
-                    Properties props = new Properties();
-                    
-                    String namePrefix = namePrefixTxt.getText();
-                    if (namePrefix != null && !namePrefix.isEmpty())
-                    {
-                        props.setProperty("namePrefix", namePrefix);
-                    }
-                    props.setProperty("renamePattern", Pattern.quote(namePrefix)+"\\d+");
-                    props.setProperty("prefsDir", prefsPath);
-                    
-                    NamerWorker task = new NamerWorker(props, logTxtArea);
-                    task.addPropertyChangeListener((PropertyChangeEvent evt) ->
-                    {
-                        if ("progess".equals(evt.getPropertyName()))
-                        {
-                            //progressBar.setValue((Integer)evt.getNewValue());
-                        }
-                    });
-                    task.execute();
+                    props.setProperty("namePrefix", namePrefix);
                 }
             }
+            
+            boolean changeMode = listModeChkBox.isSelected();
+            if (changeMode)
+            {
+                String mode = (String)listModeCombo.getSelectedItem();
+                if (mode.equals(getString("combobox.mode.list")))
+                {
+                    props.setProperty("backpackMode", "list");
+                }
+                else
+                {
+                    props.setProperty("backpackMode", "icon");
+                }
+            }
+
+            NamerWorker task = new NamerWorker(selectedPaths, props, logTxtArea);
+            task.addPropertyChangeListener((PropertyChangeEvent evt) ->
+            {
+                if ("progess".equals(evt.getPropertyName()))
+                {
+                    //progressBar.setValue((Integer)evt.getNewValue());
+                }
+            });
+            task.execute();
         });
         
         JPanel p = new JPanel();
         p.setLayout(new GridBagLayout());
         
         p.add(renameChkBox,    new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
-        p.add(namePrefixTxt,   new GridBagConstraints(1,0, 1,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.HORIZONTAL, new Insets(2,2,2,2), 0,0));
-        p.add(nameSuffixLbl,   new GridBagConstraints(2,0, 1,1, 0.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+        p.add(namePrefixTxt,   new GridBagConstraints(1,0, 2,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.HORIZONTAL, new Insets(2,2,2,2), 0,0));
+        p.add(nameSuffixLbl,   new GridBagConstraints(3,0, 1,1, 0.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
         
         p.add(listModeChkBox,  new GridBagConstraints(0,1, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
-        p.add(nameButton,      new GridBagConstraints(1,1, 2,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+        p.add(listModeCombo,   new GridBagConstraints(1,1, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
         
-        p.add(logScrollPane,   new GridBagConstraints(0,3, 3,1, 1.0,1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH,       new Insets(2,2,2,2), 0,0));
+        p.add(nameButton,      new GridBagConstraints(2,1, 2,1, 0.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+        
+        p.add(logScrollPane,   new GridBagConstraints(0,2, 4,1, 1.0,1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH,       new Insets(2,2,2,2), 0,0));
         
         return p;
+    }
+    
+    private void reloadTree()
+    {
+        DefaultTreeModel model = (DefaultTreeModel)tree.getModel();
+        DefaultMutableTreeNode root = (DefaultMutableTreeNode)model.getRoot();
+        Enumeration<DefaultMutableTreeNode> childEnum = root.depthFirstEnumeration();
+        while (childEnum.hasMoreElements())
+        {
+            DefaultMutableTreeNode child = childEnum.nextElement();
+            if (child.isLeaf())
+            {
+                Backpack backpack = (Backpack)child.getUserObject();
+                try
+                {    
+                    backpack.reload();
+                    model.nodeChanged(child);
+                }
+                catch (JDOMException|IOException ex)
+                {
+                    handleException(ex, BackpackNamer.class.getCanonicalName(), "reloadTree");
+                }
+            }
+        }
     }
     
     private JPanel buildPanel()
@@ -177,62 +218,64 @@ public class BackpackNamer extends AbstractPlugin
         splitPane.setDividerLocation(200);
         splitPane.setDividerSize(4);
 
-        TreeNode root = buildBackpackTree();
-        JTree tree = new JTree(root);
+        DefaultMutableTreeNode root = buildBackpackTreeRoot();
+        tree = new JTree(root);
         tree.setCellRenderer(new MyTreeRenderer());
-        tree.addTreeSelectionListener(new TreeSelectionListener()
+        tree.addTreeSelectionListener((TreeSelectionEvent e) ->
         {
-            private boolean disable = false;
-            
-            public void valueChanged(TreeSelectionEvent e)
+            /*
+            int divLoc = splitPane.getDividerLocation();
+            Component detailView = splitPane.getRightComponent();
+            if (detailView != null)
             {
-                if (disable)
-                {
-                    return;
-                }
-                
-                int divLoc = splitPane.getDividerLocation();
-                Component detailView = splitPane.getRightComponent();
-                if (detailView != null)
-                {
-                    splitPane.remove(detailView);
-                }
-                detailView = buildDetailPanel(tree.getSelectionPaths());
-                splitPane.setRightComponent(detailView);
-                splitPane.setDividerLocation(divLoc);
-                
-                TreePath[] modifiedPaths = e.getPaths();
-                for (TreePath path : modifiedPaths)
-                {
-                    DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
-                    if (!node.isLeaf())
-                    {
-                        disable = true;
-                        Enumeration<DefaultMutableTreeNode> enu = node.depthFirstEnumeration();
-                        while(enu.hasMoreElements())
-                        {
-                            DefaultMutableTreeNode elem = enu.nextElement();
-                            
-                            TreePath elemPath = new TreePath(elem.getPath());
-                            if (e.isAddedPath(path))
-                            {
-                                tree.addSelectionPath(elemPath);
-                            }
-                            else
-                            {
-                                tree.removeSelectionPath(elemPath);
-                            }
-                        }
-                        disable = false;
-                    }
-                }
+                splitPane.remove(detailView);
             }
+            detailView = buildDetailPanel(tree);
+            splitPane.setRightComponent(detailView);
+            splitPane.setDividerLocation(divLoc);
+            */
+            
+            /*
+            TreePath[] modifiedPaths = e.getPaths();
+            for (TreePath path : modifiedPaths)
+            {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
+            if (!node.isLeaf())
+            {
+            disable = true;
+            Enumeration<DefaultMutableTreeNode> enu = node.depthFirstEnumeration();
+            while(enu.hasMoreElements())
+            {
+            DefaultMutableTreeNode elem = enu.nextElement();
+            
+            TreePath elemPath = new TreePath(elem.getPath());
+            if (e.isAddedPath(path))
+            {
+            tree.addSelectionPath(elemPath);
+            }
+            else
+            {
+            tree.removeSelectionPath(elemPath);
+            }
+            }
+            disable = false;
+            }
+            }
+            */
         });
-        tree.setRootVisible(false);
-
+        
+        
+        // Expand account nodes
+        Enumeration<DefaultMutableTreeNode> accEnu = root.children();
+        while (accEnu.hasMoreElements())
+        {
+            DefaultMutableTreeNode acc = accEnu.nextElement();
+            tree.expandPath(new TreePath(acc.getPath()));
+        }
+        
         JScrollPane treeView = new JScrollPane(tree);
         splitPane.setLeftComponent(treeView);
-        splitPane.setRightComponent(new JPanel());
+        splitPane.setRightComponent(buildDetailPanel(tree));
         
         JPanel p = new JPanel();
         p.setName(getString("panel.name"));
@@ -281,35 +324,65 @@ public class BackpackNamer extends AbstractPlugin
     
     private class NamerWorker extends SwingWorker<Object, String>
     {
+        private TreePath[] selectedPaths = null;
         private Properties props = null;
         private JTextArea textArea = null;
         
-        public NamerWorker(Properties props, JTextArea textArea)
+        public NamerWorker(TreePath[] selectedPaths, Properties props, JTextArea textArea)
         {
+            this.selectedPaths = selectedPaths;
             this.props = props;
             this.textArea = textArea;
         }
         
-        @Override
-        public Void doInBackground()
+        private void processAccount(Account account)
         {
-            String prefsPath = props.getProperty("prefsDir");
-            File prefsDir = new File(prefsPath);
-            
-            String prefix = props.getProperty("namePrefix", "backpack");
-            
-            AOUtils.applyToBackpacks(prefsDir, (backpack) ->
+            account.getCharacters().stream().forEach((toon) -> 
+            {
+                processCharacter(toon);
+            });
+        }
+        
+        private void processCharacter(AOCharacter toon)
+        {
+            toon.getBackpacks().stream().forEach((backpack) ->
+            {
+                processBackpack(backpack);
+            });
+        }
+        
+        private void processBackpack(Backpack backpack)
+        {
+            String mode = props.getProperty("backpackMode");
+            if (mode != null)
             {
                 try
                 {
-                    backpack.setListMode(true);
-                    
+                    if (backpack.isListMode() != mode.equals("list"))
+                    {
+                        backpack.setListMode(mode.equals("list"));
+                        publish("Set backpack " + backpack.getName() + " mode to " + mode);
+                    }
+                }
+                catch (IOException ex)
+                {
+                    LOG.log(Level.WARNING, "Exception trown trying to rename backpack in {0}", new Object[]{backpack.getXMLPath()});
+                    handleException(ex, NamerWorker.class.getCanonicalName(), "doInBackground");
+                }
+            }
+
+            String prefix = props.getProperty("namePrefix");
+            if (prefix != null)
+            {
+                try
+                {
                     String oldName = backpack.getName();
                     String newName = prefix + backpack.getXMLNumber();
 
                     if (checkRename(oldName, newName))
                     {
                         backpack.setName(newName);
+                        publish("Set backpack " + oldName + " name to " + newName);
                         LOG.log(Level.FINER, "Renamed backpack \"{0}\" to \"{1}\"", new Object[]{oldName, newName});
                     }
                     else
@@ -322,9 +395,42 @@ public class BackpackNamer extends AbstractPlugin
                     LOG.log(Level.WARNING, "Exception trown trying to rename backpack in {0}", new Object[]{backpack.getXMLPath()});
                     handleException(ex, NamerWorker.class.getCanonicalName(), "doInBackground");
                 }
-
-            });
-            
+            }
+        }
+        
+        @Override
+        public Void doInBackground()
+        {
+            for (TreePath path : selectedPaths)
+            {
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
+                if (node.isRoot())
+                {
+                    Enumeration<DefaultMutableTreeNode> accountEnum = node.children();
+                    while (accountEnum.hasMoreElements())
+                    {
+                        processAccount((Account)accountEnum.nextElement().getUserObject());
+                    }
+                    
+                    // was root, nothing else to do
+                    break;
+                }
+                
+                Object obj = node.getUserObject();
+                if (obj instanceof Backpack)
+                {
+                    processBackpack((Backpack)obj);
+                }
+                else if (obj instanceof AOCharacter)
+                {
+                    processCharacter((AOCharacter)obj);
+                }
+                else if (obj instanceof Account)
+                {
+                    processAccount((Account)obj);
+                }
+            }
+            publish(getString("log.messages.finished"));
             return null;
         }
         
@@ -335,6 +441,12 @@ public class BackpackNamer extends AbstractPlugin
             {
                 textArea.append(status + "\n");
             });
+        }
+        
+        @Override
+        protected void done()
+        {
+            reloadTree();
         }
         
         private boolean checkRename(String oldName, String newName)
@@ -351,8 +463,8 @@ public class BackpackNamer extends AbstractPlugin
                     return false;
                 }
 
-                String renamePattern = props.getProperty("renamePattern");
-                if (oldName.matches(renamePattern))
+                //String renamePattern = props.getProperty("renamePattern");
+                if (oldName.matches("[^0-9]+\\d+"))
                 {
                     return true;
                 }

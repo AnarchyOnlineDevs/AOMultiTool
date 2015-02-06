@@ -87,6 +87,11 @@ public class Backpack
         }
     }
     
+    public void reload() throws JDOMException, IOException
+    {
+        this.doc = (Document)builder.build(xmlFile);
+    }
+    
     public boolean isListMode()
     {
         Element elem = getListModeElement();

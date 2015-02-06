@@ -53,22 +53,17 @@ public class Account
     {
         if (characters == null)
         {
+            characters = new ArrayList<>();
+
             File[] subDirs = dir.listFiles((file) ->
             {
                 return file.isDirectory() && file.getName().startsWith("Char");
             });
             
-            characters = new ArrayList<>();
-            
             for (File charDir : subDirs)
             {
                 characters.add(new AOCharacter(charDir));
             }
-        }
-        
-        if (characters != null && characters.size() == 0)
-        {
-            characters = null;
         }
         
         return characters;
