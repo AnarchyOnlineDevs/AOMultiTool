@@ -9,13 +9,12 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Level;
 import java.util.regex.Pattern;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -28,7 +27,6 @@ import javax.swing.SwingWorker;
 import mx.cornejo.anarchyonline.multitool.MultiTool;
 import mx.cornejo.anarchyonline.multitool.plugins.AbstractPlugin;
 import mx.cornejo.anarchyonline.utils.AOUtils;
-import mx.cornejo.anarchyonline.utils.Backpack;
 
 /**
  *
@@ -79,7 +77,6 @@ public class BackpackNamer extends AbstractPlugin
                 if (prefsPath != null)
                 {
                     logTxtArea.setText("");
-                    File prefsDirFile = new File(prefsPath);
                     
                     Properties props = new Properties();
                     
@@ -88,8 +85,8 @@ public class BackpackNamer extends AbstractPlugin
                     {
                         props.setProperty("namePrefix", namePrefix);
                     }
-                    props.setProperty("renamePattern", Pattern.quote(namePrefix + "\\d+"));
-                    props.setProperty("prefsDir", prefsDirFile.getAbsolutePath());
+                    props.setProperty("renamePattern", Pattern.quote(namePrefix)+"\\d+");
+                    props.setProperty("prefsDir", prefsPath);
                     
                     NamerWorker task = new NamerWorker(props, logTxtArea);
                     task.addPropertyChangeListener((PropertyChangeEvent evt) ->
@@ -140,14 +137,25 @@ public class BackpackNamer extends AbstractPlugin
             {
                 try
                 {
-                    if (checkRename(backpack))
+                    backpack.setListMode(true);
+                    
+                    String oldName = backpack.getName();
+                    String newName = prefix + backpack.getXMLNumber();
+
+                    if (checkRename(oldName, newName))
                     {
-                        backpack.setName(prefix + backpack.getXMLNumber());
+                        backpack.setName(newName);
+                        LOG.log(Level.FINER, "Renamed backpack \"{0}\" to \"{1}\"", new Object[]{oldName, newName});
+                    }
+                    else
+                    {
+                        LOG.log(Level.FINER, "Skipped backpack \"{0}\"", oldName);
                     }
                 }
                 catch (IOException ex)
                 {
-                    ex.printStackTrace();
+                    LOG.log(Level.WARNING, "Exception trown trying to rename backpack in {0}", new Object[]{backpack.getXMLPath()});
+                    handleException(ex, NamerWorker.class.getCanonicalName(), "doInBackground");
                 }
 
             });
@@ -164,11 +172,28 @@ public class BackpackNamer extends AbstractPlugin
             });
         }
         
-        private boolean checkRename(Backpack backpack)
+        private boolean checkRename(String oldName, String newName)
         {
-            String oldName = backpack.getName();
-            String renamePattern = props.getProperty("renamePattern");
-            return (oldName == null || oldName.isEmpty() || oldName.matches(renamePattern));
+            if (newName != null && !newName.isEmpty())
+            {
+                if (oldName == null || oldName.isEmpty())
+                {
+                    return true;
+                }
+                
+                if (oldName.equals(newName))
+                {
+                    return false;
+                }
+
+                String renamePattern = props.getProperty("renamePattern");
+                if (oldName.matches(renamePattern))
+                {
+                    return true;
+                }
+            }
+            
+            return false;
         }
     }
 
