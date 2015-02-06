@@ -102,7 +102,7 @@ public class LogParser extends AbstractPlugin
             {
                 windowSelectBox.addItem(window);
                 
-                if (lastWindowUsed.equals(window.getName()+window.getCharacter()))
+                if (lastWindowUsed != null && lastWindowUsed.equals(window.getName()+window.getCharacter()))
                 {
                     windowSelectBox.setSelectedItem(window);
                 }
@@ -161,15 +161,15 @@ public class LogParser extends AbstractPlugin
         JTabbedPane tabPane = new JTabbedPane();
         tabPane.add("text", textPanel);
         
-        JPanel panel = new JPanel();
-        panel.setName(getString("panel.name"));
-        panel.setLayout(new GridBagLayout());
+        JPanel p = new JPanel();
+        p.setName(getString("panel.name"));
+        p.setLayout(new GridBagLayout());
         
-        panel.add(windowSelectBox, new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
-        panel.add(controlBttn,     new GridBagConstraints(1,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
-        panel.add(tabPane,         new GridBagConstraints(0,1, 2,1, 1.0,1.0, GridBagConstraints.WEST,   GridBagConstraints.BOTH, new Insets(0,0,0,0), 0,0));
+        p.add(windowSelectBox, new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
+        p.add(controlBttn,     new GridBagConstraints(1,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
+        p.add(tabPane,         new GridBagConstraints(0,1, 2,1, 1.0,1.0, GridBagConstraints.WEST,   GridBagConstraints.BOTH, new Insets(0,0,0,0), 0,0));
 
-        return panel;
+        return p;
     }
 
     private class ParserWorker extends SwingWorker<Object, AOMessage>

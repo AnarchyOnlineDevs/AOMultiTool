@@ -6,26 +6,27 @@
 package mx.cornejo.anarchyonline.multitool.plugins.backpacknamer;
 
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeEvent;
 import java.io.File;
 import java.io.IOException;
-import java.text.NumberFormat;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
-import java.util.regex.Pattern;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
@@ -34,11 +35,9 @@ import javax.swing.JTree;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingWorker;
 import javax.swing.event.TreeSelectionEvent;
-import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
 import mx.cornejo.anarchyonline.multitool.MultiTool;
@@ -222,6 +221,24 @@ public class BackpackNamer extends AbstractPlugin
         DefaultMutableTreeNode root = buildBackpackTreeRoot();
         tree = new JTree(root);
         tree.setCellRenderer(new MyTreeRenderer());
+        tree.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mousePressed(MouseEvent e)
+            {
+                int x = e.getX(), y = e.getY(); 
+                int selRow = tree.getRowForLocation(x, y);
+                if (selRow != -1 && e.getClickCount() == 1 && e.getButton() == MouseEvent.BUTTON3)
+                {
+                    
+                    TreePath selPath = tree.getPathForLocation(x, y);
+                    JPopupMenu menu = new JPopupMenu();
+                    menu.add(new JMenuItem("hola"));
+                    menu.show(e.getComponent(), x, y);
+                }
+            }
+            
+        });
         tree.addTreeSelectionListener((TreeSelectionEvent e) ->
         {
             /*
@@ -306,7 +323,12 @@ public class BackpackNamer extends AbstractPlugin
             Object obj = node.getUserObject();
             if (obj instanceof Backpack)
             {
-                setText(((Backpack)obj).getName());
+                String name = ((Backpack)obj).getName();
+                if (name == null)
+                {
+                    name = getString("tree.nameless.text");
+                }
+                setText(name);
                 // setIcon(tutorialIcon);
                 // setToolTipText("This book is in the Tutorial series.");
             }

@@ -6,10 +6,8 @@
 package mx.cornejo.anarchyonline.multitool.plugins;
 
 import java.util.ResourceBundle;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.Preferences;
-import mx.cornejo.anarchyonline.multitool.plugins.backpacknamer.BackpackNamer;
 
 /**
  *

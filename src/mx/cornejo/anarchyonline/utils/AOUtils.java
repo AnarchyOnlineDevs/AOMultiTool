@@ -125,8 +125,8 @@ public class AOUtils
                     {
                         name2 = "";
                     }
-
-                    return name1.compareTo(name2);
+                    
+                    return String.CASE_INSENSITIVE_ORDER.compare(name1, name2);
                 });
 
                 backpacks.stream().forEach((backpack) -> 

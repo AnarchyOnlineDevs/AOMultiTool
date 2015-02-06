@@ -45,8 +45,8 @@ public class MultiTool extends JFrame
     public static final String PREFS_LAST_USED_TAB = "last_used_tab";
     
     private static final Logger LOG = Logger.getLogger(MultiTool.class.getCanonicalName());
-    
-    private final Preferences prefs = Preferences.userNodeForPackage(MultiTool.class);
+    private static final Preferences prefs = Preferences.userNodeForPackage(MultiTool.class);
+
     private ResourceBundle resourceBundle = null;
     private List<Plugin> plugins = null;
     
