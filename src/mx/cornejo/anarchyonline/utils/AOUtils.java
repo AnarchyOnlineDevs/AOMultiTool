@@ -7,8 +7,8 @@ package mx.cornejo.anarchyonline.utils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -99,7 +99,20 @@ public class AOUtils
         void apply(T obj);
     }
     
+    public static interface Applier3<T, U, V>
+    {
+        void apply(T obj, U obj2, V obj3);
+    }
+    
     public static void applyToBackpacks(File prefsDir, Applier<Backpack> func)
+    {
+        applyToBackpacks(prefsDir, (backpack, toon, account) ->
+        {
+            func.apply(backpack);
+        });
+    }
+    
+    public static void applyToBackpacks(File prefsDir, Applier3<Backpack,AOCharacter,Account> func)
     {
         List<Account> accounts = AOUtils.getAccounts(prefsDir);
         if (accounts != null)
@@ -114,9 +127,26 @@ public class AOUtils
                         List<Backpack> backpacks = toon.getBackpacks();
                         if (backpacks != null)
                         {
+                            backpacks.sort((Backpack b1, Backpack b2) ->
+                            {
+                                String name1 = b1.getName();
+                                if (name1 == null)
+                                {
+                                    name1 = "";
+                                }
+                                
+                                String name2 = b2.getName();
+                                if (name2 == null)
+                                {
+                                    name2 = "";
+                                }
+                                
+                                return name1.compareTo(name2);
+                            });
+
                             backpacks.stream().forEach((backpack) -> 
                             {
-                                func.apply(backpack);
+                                func.apply(backpack, toon, account);
                             });
                         }
                     });

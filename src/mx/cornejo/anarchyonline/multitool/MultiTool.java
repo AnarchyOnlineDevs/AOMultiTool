@@ -54,7 +54,7 @@ public class MultiTool extends JFrame
     {
         super();
         
-        Image icon = Toolkit.getDefaultToolkit().getImage(MultiTool.class.getResource("icon.png"));
+        Image icon = Toolkit.getDefaultToolkit().getImage(MultiTool.class.getResource("149947.gif"));
         setIconImage(icon);
         
         resourceBundle = ResourceBundle.getBundle("mx.cornejo.anarchyonline.multitool.Messages");        

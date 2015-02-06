@@ -44,6 +44,11 @@ public class Account
         this.dir = dir;
     }
     
+    public String getName()
+    {
+        return dir.getName();
+    }
+    
     public List<AOCharacter> getCharacters()
     {
         if (characters == null)

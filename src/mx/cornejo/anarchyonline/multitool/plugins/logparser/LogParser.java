@@ -156,7 +156,7 @@ public class LogParser extends AbstractPlugin
         
         JPanel textPanel = new JPanel();
         textPanel.setLayout(new GridBagLayout());
-        textPanel.add(scrollPane, new GridBagConstraints(0,0, 1,1, 1.0,1.0, GridBagConstraints.CENTER,   GridBagConstraints.BOTH, new Insets(2,2,2,2), 0,0));
+        textPanel.add(scrollPane, new GridBagConstraints(0,0, 1,1, 1.0,1.0, GridBagConstraints.CENTER,   GridBagConstraints.BOTH, new Insets(0,0,0,0), 0,0));
         
         JTabbedPane tabPane = new JTabbedPane();
         tabPane.add("text", textPanel);
@@ -167,7 +167,7 @@ public class LogParser extends AbstractPlugin
         
         panel.add(windowSelectBox, new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
         panel.add(controlBttn,     new GridBagConstraints(1,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE, new Insets(2,2,2,2), 0,0));
-        panel.add(tabPane,         new GridBagConstraints(0,1, 2,1, 1.0,1.0, GridBagConstraints.WEST,   GridBagConstraints.BOTH, new Insets(2,2,2,2), 0,0));
+        panel.add(tabPane,         new GridBagConstraints(0,1, 2,1, 1.0,1.0, GridBagConstraints.WEST,   GridBagConstraints.BOTH, new Insets(0,0,0,0), 0,0));
 
         return panel;
     }

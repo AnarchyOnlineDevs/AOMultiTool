@@ -27,6 +27,11 @@ public class AOCharacter
         this.dir = dir;
     }
     
+    public String getName()
+    {
+        return dir.getName();
+    }
+    
     public List<Backpack> getBackpacks()
     {
         if (backpacks == null)
