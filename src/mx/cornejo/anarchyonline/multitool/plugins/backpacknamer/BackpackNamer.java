@@ -14,6 +14,7 @@ import java.awt.event.ActionEvent;
 import java.beans.PropertyChangeEvent;
 import java.io.File;
 import java.io.IOException;
+import java.text.NumberFormat;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -345,13 +346,15 @@ public class BackpackNamer extends AbstractPlugin
         
         private void processCharacter(AOCharacter toon)
         {
-            toon.getBackpacks().stream().forEach((backpack) ->
+            int count = 1;
+            List<Backpack> bps = toon.getBackpacks();
+            for (Backpack bp : bps)
             {
-                processBackpack(backpack);
-            });
+                processBackpack(bp, ""+(count++));
+            }
         }
         
-        private void processBackpack(Backpack backpack)
+        private void processBackpack(Backpack backpack, String nameSuffix)
         {
             String mode = props.getProperty("backpackMode");
             if (mode != null)
@@ -377,7 +380,7 @@ public class BackpackNamer extends AbstractPlugin
                 try
                 {
                     String oldName = backpack.getName();
-                    String newName = prefix + backpack.getXMLNumber();
+                    String newName = prefix + nameSuffix;
 
                     if (checkRename(oldName, newName))
                     {
@@ -401,6 +404,7 @@ public class BackpackNamer extends AbstractPlugin
         @Override
         public Void doInBackground()
         {
+            int count = 1;
             for (TreePath path : selectedPaths)
             {
                 DefaultMutableTreeNode node = (DefaultMutableTreeNode)path.getLastPathComponent();
@@ -419,7 +423,7 @@ public class BackpackNamer extends AbstractPlugin
                 Object obj = node.getUserObject();
                 if (obj instanceof Backpack)
                 {
-                    processBackpack((Backpack)obj);
+                    processBackpack((Backpack)obj, ""+(count++));
                 }
                 else if (obj instanceof AOCharacter)
                 {
@@ -464,7 +468,7 @@ public class BackpackNamer extends AbstractPlugin
                 }
 
                 //String renamePattern = props.getProperty("renamePattern");
-                if (oldName.matches("[^0-9]+\\d+"))
+                //if (oldName.matches("[^0-9]+\\d+"))
                 {
                     return true;
                 }
