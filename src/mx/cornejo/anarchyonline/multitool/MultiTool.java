@@ -26,6 +26,8 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
 import mx.cornejo.anarchyonline.multitool.plugins.Plugin;
 import mx.cornejo.anarchyonline.multitool.plugins.backpacknamer.BackpackNamer;
@@ -225,6 +227,18 @@ public class MultiTool extends JFrame
      */
     public static void main(String[] args)
     {
+        try
+        {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        }
+        catch (ClassNotFoundException|
+                InstantiationException|
+                IllegalAccessException|
+                UnsupportedLookAndFeelException ex)
+        {
+            ex.printStackTrace();
+        }
+        
         MultiTool multiTool = new MultiTool();
         
         Runtime.getRuntime().addShutdownHook(new Thread()

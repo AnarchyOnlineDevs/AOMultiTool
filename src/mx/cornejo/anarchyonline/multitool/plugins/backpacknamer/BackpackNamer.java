@@ -5,6 +5,7 @@
  */
 package mx.cornejo.anarchyonline.multitool.plugins.backpacknamer;
 
+import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -12,6 +13,7 @@ import java.awt.event.ActionEvent;
 import java.beans.PropertyChangeEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -20,13 +22,22 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.JTree;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingWorker;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.TreeNode;
+import javax.swing.tree.TreePath;
+
 import mx.cornejo.anarchyonline.multitool.MultiTool;
 import mx.cornejo.anarchyonline.multitool.plugins.AbstractPlugin;
 import mx.cornejo.anarchyonline.utils.AOUtils;
+import mx.cornejo.anarchyonline.utils.Backpack;
 
 /**
  *
@@ -57,7 +68,43 @@ public class BackpackNamer extends AbstractPlugin
         return panel;
     }
     
-    private JPanel buildPanel()
+    private TreeNode buildBackpackTree()
+    {
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("All");
+        
+        HashMap<String, DefaultMutableTreeNode> charNodes = new HashMap<>();
+        HashMap<String, DefaultMutableTreeNode> accNodes = new HashMap<>();
+
+        String prefsPath = getPreference(MultiTool.PREFS_AO_PREFS_DIR, null);
+        AOUtils.applyToBackpacks(new File(prefsPath), (backpack) -> 
+        {
+            DefaultMutableTreeNode backpackNode = new DefaultMutableTreeNode(backpack);
+            
+            String account = backpack.getAccount();
+            DefaultMutableTreeNode accNode = accNodes.get(account);
+            if (accNode == null)
+            {
+                accNode = new DefaultMutableTreeNode(account);
+                accNodes.put(account, accNode);
+                root.add(accNode);
+            }
+            
+            String toon = backpack.getCharacter();
+            DefaultMutableTreeNode charNode = charNodes.get(toon);
+            if (charNode == null)
+            {
+                charNode = new DefaultMutableTreeNode(toon);
+                charNodes.put(toon, charNode);
+                accNode.add(charNode);
+            }
+            
+            charNode.add(backpackNode);
+        });
+        
+        return root;
+    }
+    
+    private JPanel buildDetailPanel(TreePath[] selected)
     {
         JLabel namePrefixLbl = new JLabel(getString("label.prefix.name"));
         JTextField namePrefixTxt = new JTextField(getString("text.prefix.default"));
@@ -102,16 +149,77 @@ public class BackpackNamer extends AbstractPlugin
         });
         
         JPanel p = new JPanel();
-        p.setName(getString("panel.name"));
         p.setLayout(new GridBagLayout());
         
-        p.add(namePrefixLbl,   new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
-        p.add(namePrefixTxt,   new GridBagConstraints(1,0, 1,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.HORIZONTAL, new Insets(2,2,2,2), 0,0));
+        p.add(namePrefixLbl,   new GridBagConstraints(1,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+        p.add(namePrefixTxt,   new GridBagConstraints(2,0, 1,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.HORIZONTAL, new Insets(2,2,2,2), 0,0));
         
-        p.add(logScrollPane,   new GridBagConstraints(0,1, 2,1, 1.0,1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH,       new Insets(2,2,2,2), 0,0));
-        p.add(nameButton,      new GridBagConstraints(0,2, 2,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+        p.add(logScrollPane,   new GridBagConstraints(1,1, 2,1, 1.0,1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH,       new Insets(2,2,2,2), 0,0));
+        p.add(nameButton,      new GridBagConstraints(1,2, 2,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
         
         return p;
+    }
+    
+    private JPanel buildPanel()
+    {
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitPane.setResizeWeight(0.3);
+        splitPane.setDividerSize(4);
+
+        TreeNode root = buildBackpackTree();
+        JTree tree = new JTree(root);
+        tree.setCellRenderer(new MyTreeRenderer());
+        tree.addTreeSelectionListener((TreeSelectionEvent e) ->
+        {
+            Component detailView = splitPane.getRightComponent();
+            if (detailView != null)
+            {
+                splitPane.remove(detailView);
+            }
+            detailView = buildDetailPanel(tree.getSelectionPaths());
+            splitPane.setRightComponent(detailView);
+        });
+        tree.setSelectionRow(0);
+
+        JScrollPane treeView = new JScrollPane(tree);
+        splitPane.setLeftComponent(treeView);
+        
+        JPanel p = new JPanel();
+        p.setName(getString("panel.name"));
+        p.setLayout(new GridBagLayout());
+        p.add(splitPane, new GridBagConstraints(0,0, 1,1, 1.0,1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0,0,0,0), 0,0));
+        return p;
+    }
+    
+    private class MyTreeRenderer extends DefaultTreeCellRenderer 
+    {
+        @Override
+        public Component getTreeCellRendererComponent(
+                            JTree tree,
+                            Object value,
+                            boolean sel,
+                            boolean expanded,
+                            boolean leaf,
+                            int row,
+                            boolean hasFocus) {
+
+            super.getTreeCellRendererComponent(
+                            tree, value, sel,
+                            expanded, leaf, row,
+                            hasFocus);
+            
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode)value;
+            Object obj = node.getUserObject();
+            if (obj instanceof Backpack)
+            {
+                Backpack bp = (Backpack)obj;
+                setText(bp.getName());
+                //                 setIcon(tutorialIcon);
+                // setToolTipText("This book is in the Tutorial series.");
+            }
+
+            return this;
+        }
     }
     
     private class NamerWorker extends SwingWorker<Object, String>

@@ -102,18 +102,27 @@ public class AOUtils
     public static void applyToBackpacks(File prefsDir, Applier<Backpack> func)
     {
         List<Account> accounts = AOUtils.getAccounts(prefsDir);
-        accounts.stream().forEach((account) -> 
+        if (accounts != null)
         {
-            List<AOCharacter> toons = account.getCharacters();
-            toons.stream().forEach((toon) -> 
+            accounts.stream().forEach((account) -> 
             {
-                List<Backpack> backpacks = toon.getBackpacks();
-                backpacks.stream().forEach((backpack) -> 
+                List<AOCharacter> toons = account.getCharacters();
+                if (toons != null)
                 {
-                    func.apply(backpack);
-                });
+                    toons.stream().forEach((toon) -> 
+                    {
+                        List<Backpack> backpacks = toon.getBackpacks();
+                        if (backpacks != null)
+                        {
+                            backpacks.stream().forEach((backpack) -> 
+                            {
+                                func.apply(backpack);
+                            });
+                        }
+                    });
+                }
             });
-        });
+        }
     }
     
     public static void applyToWindows(File prefsDir, Applier<ChatWindow> func)
