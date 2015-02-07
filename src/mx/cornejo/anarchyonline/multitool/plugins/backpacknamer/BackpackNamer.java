@@ -6,12 +6,16 @@
 package mx.cornejo.anarchyonline.multitool.plugins.backpacknamer;
 
 import java.awt.Component;
+import java.awt.Desktop;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Rectangle2D;
 import java.beans.PropertyChangeEvent;
 import java.io.File;
 import java.io.IOException;
@@ -121,6 +125,9 @@ public class BackpackNamer extends AbstractPlugin
         JCheckBox listModeChkBox = new JCheckBox(getString("checkbox.listmode.text"));
         JComboBox listModeCombo = new JComboBox(new String[] {getString("combobox.mode.list"), getString("combobox.mode.icon")});
         
+        JCheckBox resizeChkBox = new JCheckBox(getString("checkbox.resize.text"));
+        JTextField resizeTxt = new JTextField();
+        
         JTextArea logTxtArea = new JTextArea();
         logTxtArea.setEditable(false);
         
@@ -159,6 +166,16 @@ public class BackpackNamer extends AbstractPlugin
                     props.setProperty("backpackMode", "icon");
                 }
             }
+            
+            boolean resize = resizeChkBox.isSelected();
+            if (resize)
+            {
+                String newSize = resizeTxt.getText();
+                if (newSize != null && !newSize.isEmpty())
+                {
+                    props.setProperty("resize", newSize);
+                }
+            }
 
             NamerWorker task = new NamerWorker(selectedPaths, props, logTxtArea);
             task.addPropertyChangeListener((PropertyChangeEvent evt) ->
@@ -177,13 +194,17 @@ public class BackpackNamer extends AbstractPlugin
         p.add(renameChkBox,    new GridBagConstraints(0,0, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
         p.add(namePrefixTxt,   new GridBagConstraints(1,0, 2,1, 1.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.HORIZONTAL, new Insets(2,2,2,2), 0,0));
         p.add(nameSuffixLbl,   new GridBagConstraints(3,0, 1,1, 0.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+
+        p.add(resizeChkBox,    new GridBagConstraints(0,1, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+        p.add(resizeTxt,       new GridBagConstraints(1,1, 3,1, 1.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.HORIZONTAL, new Insets(2,2,2,2), 0,0));
         
-        p.add(listModeChkBox,  new GridBagConstraints(0,1, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
-        p.add(listModeCombo,   new GridBagConstraints(1,1, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+        p.add(listModeChkBox,  new GridBagConstraints(0,2, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+        p.add(listModeCombo,   new GridBagConstraints(1,2, 1,1, 0.0,0.0, GridBagConstraints.WEST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
         
-        p.add(nameButton,      new GridBagConstraints(2,1, 2,1, 0.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
         
-        p.add(logScrollPane,   new GridBagConstraints(0,2, 4,1, 1.0,1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH,       new Insets(2,2,2,2), 0,0));
+        p.add(nameButton,      new GridBagConstraints(2,2, 2,1, 0.0,0.0, GridBagConstraints.EAST,   GridBagConstraints.NONE,       new Insets(2,2,2,2), 0,0));
+        
+        p.add(logScrollPane,   new GridBagConstraints(0,3, 4,1, 1.0,1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH,       new Insets(2,2,2,2), 0,0));
         
         return p;
     }
@@ -212,6 +233,70 @@ public class BackpackNamer extends AbstractPlugin
         }
     }
     
+    private JPopupMenu createBackpackContextMenu(Backpack backpack)
+    {
+        JPopupMenu menu = new JPopupMenu();
+
+        {
+            JMenuItem mi = new JMenuItem(getString("contextmenu.backpack.openxml"));
+            mi.addActionListener((ActionEvent e) ->
+            {
+                try
+                {
+                    Desktop.getDesktop().open(new File(backpack.getXMLPath()));
+                }
+                catch (IOException ex)
+                {
+                    handleException(ex, BackpackNamer.class.getCanonicalName(), "createBackpackContextMenu");
+                }
+            });
+            menu.add(mi);
+        }
+        
+        File dockAreaXml = backpack.getDockAreaFile();
+        if (dockAreaXml != null)
+        {
+            {
+                JMenuItem mi = new JMenuItem(getString("contextmenu.backpack.opendockareaxml"));
+                mi.addActionListener((ActionEvent e) ->
+                {
+                    try
+                    {
+                        Desktop.getDesktop().open(dockAreaXml);
+                    }
+                    catch (IOException ex)
+                    {
+                        handleException(ex, BackpackNamer.class.getCanonicalName(), "createBackpackContextMenu");
+                    }
+                });
+                menu.add(mi);
+            }
+            
+            String size = backpack.getWindowSize();
+            if (size != null)
+            {
+                JMenuItem mi = new JMenuItem(getString("contextmenu.backpack.copysize"));
+                mi.addActionListener((ActionEvent e) ->
+                {
+                    Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(size), null);
+                });
+                menu.add(mi);
+            }
+        }
+        
+        return menu;
+    }
+
+    private JPopupMenu createCharacterContextMenu(AOCharacter toon)
+    {
+        return null;
+    }
+
+    private JPopupMenu createAccountContextMenu(Account account)
+    {
+        return null;
+    }
+
     private JPanel buildPanel()
     {
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
@@ -232,9 +317,26 @@ public class BackpackNamer extends AbstractPlugin
                 {
                     
                     TreePath selPath = tree.getPathForLocation(x, y);
-                    JPopupMenu menu = new JPopupMenu();
-                    menu.add(new JMenuItem("hola"));
-                    menu.show(e.getComponent(), x, y);
+                    DefaultMutableTreeNode node = (DefaultMutableTreeNode)selPath.getLastPathComponent();
+                    Object obj = node.getUserObject();
+                    
+                    JPopupMenu menu = null;
+                    if (obj instanceof Backpack)
+                    {
+                        menu = createBackpackContextMenu((Backpack)obj);
+                    }
+                    else if (obj instanceof AOCharacter)
+                    {
+                        menu = createCharacterContextMenu((AOCharacter)obj);
+                    }
+                    else if (obj instanceof Account)
+                    {
+                        menu = createAccountContextMenu((Account)obj);
+                    }
+                    if (menu != null)
+                    {
+                        menu.show(e.getComponent(), x, y);
+                    }
                 }
             }
             
@@ -391,7 +493,7 @@ public class BackpackNamer extends AbstractPlugin
                 }
                 catch (IOException ex)
                 {
-                    LOG.log(Level.WARNING, "Exception trown trying to rename backpack in {0}", new Object[]{backpack.getXMLPath()});
+                    LOG.log(Level.WARNING, "Exception trown trying set backpack mode in {0}", new Object[]{backpack.getXMLPath()});
                     handleException(ex, NamerWorker.class.getCanonicalName(), "doInBackground");
                 }
             }
@@ -418,6 +520,20 @@ public class BackpackNamer extends AbstractPlugin
                 catch (IOException ex)
                 {
                     LOG.log(Level.WARNING, "Exception trown trying to rename backpack in {0}", new Object[]{backpack.getXMLPath()});
+                    handleException(ex, NamerWorker.class.getCanonicalName(), "doInBackground");
+                }
+            }
+            
+            String resize = props.getProperty("resize");
+            if (resize != null)
+            {
+                try
+                {
+                    backpack.setWindowSize(resize);
+                    publish("Set backpack size to " + resize);
+                }
+                catch (IOException ex)
+                {
                     handleException(ex, NamerWorker.class.getCanonicalName(), "doInBackground");
                 }
             }

@@ -106,7 +106,6 @@ public class AOUtils
     
     public static void applyToBackpacks(File prefsDir, Applier3<Backpack,AOCharacter,Account> func)
     {
-
         AOUtils.getAccounts(prefsDir).stream().forEach((account) -> 
         {
             account.getCharacters().stream().forEach((toon) -> 

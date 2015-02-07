@@ -5,6 +5,7 @@
  */
 package mx.cornejo.anarchyonline.utils;
 
+import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -38,8 +39,15 @@ public class Backpack
     private static final XPathExpression<Element> listModeExpr = 
             xFactory.compile("/Archive/Archive/Bool[@name='listview_mode']", Filters.element("Bool"));
     
+    private static final XPathExpression<Element> dockNameExpr =
+            xFactory.compile("/Archive/String[@name='DockableViewDockName']", Filters.element("String"));
+    
+    private static final XPathExpression<Element> dockSizeExpr = 
+            xFactory.compile("/Archive/Archive/Rect[@name='WindowFrame']", Filters.element("Rect"));
+    
     private File xmlFile = null;
     private Document doc = null;
+    private Document dockAreaDoc = null;
     
     static
     {
@@ -52,32 +60,74 @@ public class Backpack
     {
         this.xmlFile = xmlFile;
         this.doc = (Document)builder.build(xmlFile);
+        
+        try
+        {
+            this.dockAreaDoc = (Document)builder.build(getDockAreaFile());
+        }
+        catch (Exception ex)
+        {
+            //ex.printStackTrace();
+        }
     }
     
-    private Element evalXPath(XPathExpression<Element> xpression)
+    private static Element evalXPath(XPathExpression<Element> xpression, Document doc)
     {
         Element elem = null;
-        List<Element> list = xpression.evaluate(doc);
-        if (list.size() > 0)
+        
+        if (doc != null)
         {
-            elem = list.get(0);
+            List<Element> list = xpression.evaluate(doc);
+            if (list.size() > 0)
+            {
+                elem = list.get(0);
+            }
         }
+        
         return elem;
     }
     
     private Element getNameElement()
     {
-        return evalXPath(nameExpr);
+        return evalXPath(nameExpr, doc);
     }
     
     private Element getListModeElement()
     {
-        return evalXPath(listModeExpr);
+        return evalXPath(listModeExpr, doc);
     }
     
-    private void writeXMLFile() throws IOException
+    private Element getDockAreaElement()
     {
-        try (FileWriter fw = new FileWriter(xmlFile)) 
+        return evalXPath(dockNameExpr, doc);
+    }
+    
+    private Element getDockAreaSizeElement()
+    {
+        return evalXPath(dockSizeExpr, dockAreaDoc);
+    }
+    
+    public File getDockAreaFile()
+    {
+        File file = null;
+        
+        Element elem = getDockAreaElement();
+        if (elem != null)
+        {
+            String dockName = elem.getAttributeValue("value");
+            dockName = dockName.substring(1, dockName.length()-1);
+            
+            String dockAreaPath = xmlFile.getParentFile().getParentFile().getAbsolutePath() + 
+                                    File.separator + "DockAreas" +
+                                    File.separator + dockName + ".xml";
+            file = new File(dockAreaPath);
+        }
+        return file;
+    }
+    
+    private static void writeXMLFile(File file, Document doc) throws IOException
+    {
+        try (FileWriter fw = new FileWriter(file)) 
         {
             writer.output(doc, fw);
         }
@@ -112,7 +162,7 @@ public class Backpack
             //todo: create parent and attach to root
         }
         elem.setAttribute("value", Boolean.toString(flag));
-        writeXMLFile();
+        writeXMLFile(xmlFile, doc);
     }
     
     public String getName()
@@ -136,7 +186,7 @@ public class Backpack
             doc.getRootElement().addContent(elem);
         }
         elem.setAttribute("value", "\""+name+"\"");
-        writeXMLFile();
+        writeXMLFile(xmlFile, doc);
     }
     
     public String getXMLPath()
@@ -163,5 +213,26 @@ public class Backpack
         String path = xmlFile.getAbsolutePath();
         String[] segments = path.split(Pattern.quote(File.separator));
         return segments[segments.length-4];
+    }
+    
+    public String getWindowSize()
+    {
+        Element dockAreaElem = this.getDockAreaSizeElement();
+        if (dockAreaElem != null)
+        {
+            return dockAreaElem.getAttributeValue("value");
+        }
+        return null;
+    }
+    
+    public void setWindowSize(String size) throws IOException
+    {
+        File dockAreaFile = this.getDockAreaFile();
+        if (dockAreaFile != null && dockAreaDoc != null)
+        {
+            Element elem = this.getDockAreaSizeElement();
+            elem.setAttribute("value", size);
+            writeXMLFile(dockAreaFile, dockAreaDoc);
+        }
     }
 }

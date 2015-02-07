@@ -76,9 +76,9 @@ public class MultiTool extends JFrame
     private List<Plugin> loadPlugins()
     {
         List<Plugin> pluginList = new ArrayList();
-        
-        pluginList.add(new LogParser());
+
         pluginList.add(new BackpackNamer());
+        pluginList.add(new LogParser());
         
         pluginList.stream().forEach((plugin) -> 
         {
