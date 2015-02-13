@@ -159,6 +159,10 @@ public class LogParser extends AbstractPlugin
         textPanel.add(scrollPane, new GridBagConstraints(0,0, 1,1, 1.0,1.0, GridBagConstraints.CENTER,   GridBagConstraints.BOTH, new Insets(0,0,0,0), 0,0));
         
         JTabbedPane tabPane = new JTabbedPane();
+
+        JPanel rulesPanel = new RulesPanel();
+        
+        tabPane.add(rulesPanel.getName(), rulesPanel);
         tabPane.add("text", textPanel);
         
         JPanel p = new JPanel();
