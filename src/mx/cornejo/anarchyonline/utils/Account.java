@@ -26,12 +26,15 @@ public class Account
         if (dir.exists() && dir.isDirectory())
         {
             File[] subs = dir.listFiles();
-            for (File sub : subs)
+            if (subs != null)
             {
-                if (sub.getName().equals("Login.cfg"))
+                for (File sub : subs)
                 {
-                    loginCfgFound = true;
-                    break;
+                    if (sub.getName().equals("Login.cfg"))
+                    {
+                        loginCfgFound = true;
+                        break;
+                    }
                 }
             }
         }
